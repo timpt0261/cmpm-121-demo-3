@@ -40,7 +40,7 @@ leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
-      "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   })
   .addTo(map);
 
@@ -72,10 +72,6 @@ const board = new Board(config.tileDegrees, config.neighborhoodSize);
 
 function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   const geoCell = [cell.i, cell.j].toString();
-  if (cell.i === 369988 && cell.j === -1220536) {
-    const to = geoSnapShots.has(geoCell)!;
-    console.log(to);
-  }
   let geoCache: Geocache;
   if (geoSnapShots.has(geoCell)) {
     console.log("Cell already exists in geo shot");

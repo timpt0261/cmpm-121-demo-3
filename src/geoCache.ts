@@ -1,4 +1,3 @@
-// geocache.ts
 import { Cell } from "./board";
 import luck from "./luck";
 
