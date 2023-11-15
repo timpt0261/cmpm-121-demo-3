@@ -3,76 +3,152 @@ import "./style.css";
 import leaflet from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
+import { Cell, Board } from "./board";
+import { Geocache } from "./geoCache";
 
+interface Coin {
+  cell: Cell;
+  serial: number;
+}
 
 const MERRILL_CLASSROOM = leaflet.latLng({
-    lat: 36.9995,
-    lng: - 122.0533
+  lat: 36.9995,
+  lng: -122.0533,
 });
 
-const GAMEPLAY_ZOOM_LEVEL = 19;
-const TILE_DEGREES = 1e-4;
-const NEIGHBORHOOD_SIZE = 8;
-const PIT_SPAWN_PROBABILITY = 0.1;
+const config = {
+  gamePlayZoomLevel: 19,
+  tileDegrees: 1e-4,
+  neighborhoodSize: 8,
+  pitSpawnProbability: 0.1,
+};
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
-
+if (!mapContainer) {
+  console.error("Map Container not found");
+}
 const map = leaflet.map(mapContainer, {
-    center: MERRILL_CLASSROOM,
-    zoom: GAMEPLAY_ZOOM_LEVEL,
-    minZoom: GAMEPLAY_ZOOM_LEVEL,
-    maxZoom: GAMEPLAY_ZOOM_LEVEL,
-    zoomControl: false,
-    scrollWheelZoom: false
+  center: MERRILL_CLASSROOM,
+  zoom: config.gamePlayZoomLevel,
+  minZoom: config.gamePlayZoomLevel,
+  maxZoom: config.gamePlayZoomLevel,
+  zoomControl: false,
+  scrollWheelZoom: false,
 });
 
-leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+leaflet
+  .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
-}).addTo(map);
+    attribution:
+      "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+  })
+  .addTo(map);
 
 const playerMarker = leaflet.marker(MERRILL_CLASSROOM);
 playerMarker.bindTooltip("That's you!");
 playerMarker.addTo(map);
 
-let points = 0;
+const sensorButton = document.querySelector("#sensor")!;
+sensorButton.addEventListener("click", () => {
+  navigator.geolocation.watchPosition((position) => {
+    const localPostion = leaflet.latLng(
+      position.coords.latitude,
+      position.coords.longitude
+    );
+    generateCacheLocations(localPostion);
+    playerMarker.setLatLng(localPostion);
+    map.setView(playerMarker.getLatLng());
+  });
+});
+
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
+const inventoryOfCoins: Coin[] = [];
 
-function makePit(i: number, j: number) {
-    const bounds = leaflet.latLngBounds([
-        [MERRILL_CLASSROOM.lat + i * TILE_DEGREES,
-        MERRILL_CLASSROOM.lng + j * TILE_DEGREES],
-        [MERRILL_CLASSROOM.lat + (i + 1) * TILE_DEGREES,
-        MERRILL_CLASSROOM.lng + (j + 1) * TILE_DEGREES],
-    ]);
+// modify to include current coins in inventory
+const currentPosition = playerMarker.getLatLng();
+const geoSnapShots = new Map<string, string>();
+const board = new Board(config.tileDegrees, config.neighborhoodSize);
 
-    const pit = leaflet.rectangle(bounds) as leaflet.Layer;
+function makeGeocache(cell: Cell): leaflet.Layer | undefined {
+  const geoCell = [cell.i, cell.j].toString();
+  if (cell.i === 369988 && cell.j === -1220536) {
+    const to = geoSnapShots.has(geoCell)!;
+    console.log(to);
+  }
+  let geoCache: Geocache;
+  if (geoSnapShots.has(geoCell)) {
+    console.log("Cell already exists in geo shot");
+    const momento = geoSnapShots.get(geoCell)!;
+    geoCache = new Geocache({ i: 0, j: 0 });
+    geoCache.fromMomento(momento);
+    return;
+  }
 
+  geoCache = new Geocache(cell);
+  const bounds = board.getCellBounds(cell);
+  const pit = leaflet.rectangle(bounds) as leaflet.Layer;
 
+  pit.bindPopup(() => {
+    return geoCache.setupPit(statusPanel, inventoryOfCoins);
+  });
 
-    pit.bindPopup(() => {
-        let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
-        const container = document.createElement("div");
-        container.innerHTML = `
-                <div>There is a pit here at "${i},${j}". It has value <span id="value">${value}</span>.</div>
-                <button id="poke">poke</button>`;
-        const poke = container.querySelector<HTMLButtonElement>("#poke")!;
-        poke.addEventListener("click", () => {
-            value--;
-            container.querySelector<HTMLSpanElement>("#value")!.innerHTML = value.toString();
-            points++;
-            statusPanel.innerHTML = `${points} points accumulated`;
-        });
-        return container;
-    });
-    pit.addTo(map);
+  pit.addTo(map);
+  const momento = geoCache.toMomento();
+
+  geoSnapShots.set(geoCell, momento);
+  return pit;
 }
 
-for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
-    for (let j = - NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
-        if (luck([i, j].toString()) < PIT_SPAWN_PROBABILITY) {
-            makePit(i, j);
-        }
+generateCacheLocations(currentPosition);
+console.log("GeoSnapShot :", geoSnapShots);
+
+function generateCacheLocations(position: leaflet.LatLng) {
+  for (const cell of board.getCellsNearPoint(position)) {
+    if (luck([cell.i, cell.j].toString()) < config.pitSpawnProbability) {
+      makeGeocache(cell);
     }
+  }
 }
+console.log("a");
+
+const dir = {
+  directions: ["north", "south", "east", "west"],
+  directionButtons: Array<HTMLButtonElement>(),
+};
+
+function handleButtonClick(
+  this: HTMLButtonElement,
+  _ev: MouseEvent,
+  direction: string
+) {
+  const position = playerMarker.getLatLng();
+  switch (direction) {
+    case "north":
+      position.lat += config.tileDegrees;
+      break;
+    case "south":
+      position.lat -= config.tileDegrees;
+      break;
+    case "east":
+      position.lng += config.tileDegrees;
+      break;
+    case "west":
+      position.lng -= config.tileDegrees;
+      break;
+    default:
+      console.error("Invalid direction");
+  }
+  playerMarker.setLatLng(position);
+  map.setView(position);
+  generateCacheLocations(position);
+}
+
+dir.directions.forEach((_dir) => {
+  const selector = `#${_dir}`;
+  const button: HTMLButtonElement = document.querySelector(selector)!;
+  button.addEventListener("click", (ev: MouseEvent) =>
+    handleButtonClick.call(button, ev, _dir)
+  );
+  dir.directionButtons.push(button);
+});
