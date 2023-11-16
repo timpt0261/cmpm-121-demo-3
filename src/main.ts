@@ -40,7 +40,7 @@ leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution:
-      "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   })
   .addTo(map);
 
@@ -61,11 +61,10 @@ sensorButton.addEventListener("click", () => {
   });
 });
 
-const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
+let statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
-const inventoryOfCoins: Coin[] = [];
+let inventoryOfCoins: Coin[] = [];
 
-// modify to include current coins in inventory
 const currentPosition = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
 const board = new Board(config.tileDegrees, config.neighborhoodSize);
@@ -74,7 +73,7 @@ function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   const geoCell = [cell.i, cell.j].toString();
   let geoCache: Geocache;
   if (geoSnapShots.has(geoCell)) {
-    console.log("Cell already exists in geo shot");
+    console.log("Cell already exists in geoSnapShot");
     const momento = geoSnapShots.get(geoCell)!;
     geoCache = new Geocache({ i: 0, j: 0 });
     geoCache.fromMomento(momento);
@@ -86,7 +85,12 @@ function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
 
   pit.bindPopup(() => {
-    return geoCache.setupPit(statusPanel, inventoryOfCoins);
+    const output = geoCache.setupPit(statusPanel, inventoryOfCoins);
+    if (output) {
+      inventoryOfCoins = output.inventoryOfCoins;
+      statusPanel = output.statusPanel as HTMLDivElement;
+    }
+    return output.container;
   });
 
   pit.addTo(map);
@@ -97,7 +101,6 @@ function makeGeocache(cell: Cell): leaflet.Layer | undefined {
 }
 
 generateCacheLocations(currentPosition);
-console.log("GeoSnapShot :", geoSnapShots);
 
 function generateCacheLocations(position: leaflet.LatLng) {
   for (const cell of board.getCellsNearPoint(position)) {
@@ -106,7 +109,6 @@ function generateCacheLocations(position: leaflet.LatLng) {
     }
   }
 }
-console.log("a");
 
 const dir = {
   directions: ["north", "south", "east", "west"],
