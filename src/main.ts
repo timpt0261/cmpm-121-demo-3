@@ -75,19 +75,19 @@ function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   if (geoSnapShots.has(geoCell)) {
     console.log("Cell already exists in geoSnapShot");
     const momento = geoSnapShots.get(geoCell)!;
-    geoCache = new Geocache({ i: 0, j: 0 });
+    geoCache = new Geocache({ i: 0, j: 0 }, inventoryOfCoins, statusPanel);
     geoCache.fromMomento(momento);
     return;
   }
 
-  geoCache = new Geocache(cell);
+  geoCache = new Geocache(cell, inventoryOfCoins, statusPanel);
   const bounds = board.getCellBounds(cell);
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
 
   pit.bindPopup(() => {
-    const output = geoCache.setupPit(statusPanel, inventoryOfCoins);
+    const output = geoCache.setupPit();
     if (output) {
-      inventoryOfCoins = output.inventoryOfCoins;
+      inventoryOfCoins = output.inventoryOfCoins as Coin[];
       statusPanel = output.statusPanel as HTMLDivElement;
     }
     return output.container;

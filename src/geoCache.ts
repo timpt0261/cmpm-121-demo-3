@@ -19,8 +19,9 @@ export class Geocache implements Momento<string> {
   private readonly cell: Cell;
   private coins: Coin[] = [];
   private container: HTMLDivElement;
-
-  constructor(cell: Cell) {
+  private inventoryOfCoins: Coin[];
+  private statusPanel: HTMLElement;
+  constructor(cell: Cell, inventoryOfCoins: Coin[], statusPanel: HTMLElement) {
     this.cell = cell;
     this.container = document.createElement("div")!;
     this.container.id = "geocache-container";
@@ -51,7 +52,20 @@ export class Geocache implements Momento<string> {
     this.container.appendChild(pullButton);
 
     this.generateCoins();
-    this.updateDescription();
+    // this.updateDescription();
+
+    const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
+    pull.addEventListener("click", () => {
+      return this.handlePull();
+    });
+
+    const poke = this.container.querySelector<HTMLButtonElement>("#poke")!;
+    poke.addEventListener("click", () => {
+      return this.handlePoke();
+    });
+
+    this.inventoryOfCoins = inventoryOfCoins;
+    this.statusPanel = statusPanel;
 
     return;
   }
@@ -85,58 +99,37 @@ export class Geocache implements Momento<string> {
     this.container = state.container;
   }
 
-  setupPit(statusPanel: HTMLElement, inventoryOfCoins: Coin[]) {
-    const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
-    pull.addEventListener("click", () => { 
-      const output = this.handlePull(inventoryOfCoins, statusPanel);
-      if (output) {
-        inventoryOfCoins = output.inventoryOfCoins;
-        statusPanel = output.statusPanel;
-      }
-      return;
-    });
-    const poke = this.container.querySelector<HTMLButtonElement>("#poke")!;
-    poke.addEventListener("click", () => { 
-      const output = this.handlePoke(inventoryOfCoins, statusPanel);
-      if (output) {
-        inventoryOfCoins = output.inventoryOfCoins;
-        statusPanel = output.statusPanel;
-      }
-      return;
-
-    });
-    return { container: this.container, inventoryOfCoins, statusPanel };
+  setupPit() {
+    return {
+      container: this.container,
+      inventoryOfCoins: this.inventoryOfCoins,
+      statusPanel: this.statusPanel,
+    };
   }
-  private handlePull(
-    inventoryOfCoins: Coin[],
-    statusPanel: HTMLElement
-  ): GeoCacheOutput | undefined {
-    if (!inventoryOfCoins.length) return undefined;
-    const cachedCoin = inventoryOfCoins.shift()!;
-    statusPanel.innerHTML = `${inventoryOfCoins.length} points accumulated`;
+
+  private handlePull() {
+    if (!this.inventoryOfCoins.length) return undefined;
+    const cachedCoin = this.inventoryOfCoins.shift()!;
+    this.statusPanel.innerHTML = `${this.inventoryOfCoins.length} points accumulated`;
     this.coins.push(cachedCoin);
     this.updateDescription();
-    return {inventoryOfCoins, statusPanel };
   }
 
-  private handlePoke(
-    inventoryOfCoins: Coin[],
-    statusPanel: HTMLElement
-  ): GeoCacheOutput | undefined {
+  private handlePoke() {
     if (!this.coins.length) return undefined;
     const cachedCoin: Coin = this.coins.shift()!;
     this.updateDescription();
     this.coins.length.toString();
-    inventoryOfCoins.push(cachedCoin);
-    statusPanel.innerHTML = `${inventoryOfCoins.length} points accumulated`;
-    return { inventoryOfCoins, statusPanel };
+    this.inventoryOfCoins.push(cachedCoin);
+    this.statusPanel.innerHTML = `${this.inventoryOfCoins.length} points accumulated`;
+    return;
   }
   private updateDescription(): void {
     const description =
       this.container.querySelector<HTMLDivElement>("#description")!;
     const valueSpan = description.querySelector<HTMLSpanElement>("#value")!;
     valueSpan.innerText = this.coins.length.toString();
-    
+
     const coinsContainer =
       this.container.querySelector<HTMLDivElement>("#coins")!;
     let updatedTextLines = "";
@@ -144,6 +137,5 @@ export class Geocache implements Momento<string> {
       updatedTextLines += `<p> Coin  i:${coin.cell.i}  j:${coin.cell.j} serial:${coin.serial}</p>`;
     });
     coinsContainer.innerHTML = updatedTextLines;
-
   }
 }
