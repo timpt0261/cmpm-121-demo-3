@@ -20,8 +20,9 @@ export class Geocache implements Momento<string> {
   private coins: Coin[] = [];
   private container: HTMLDivElement;
   private inventoryOfCoins: Coin[];
-  private statusPanel: HTMLElement;
-  constructor(cell: Cell, inventoryOfCoins: Coin[], statusPanel: HTMLElement) {
+  private statusPanel: HTMLDivElement;
+
+  constructor(cell: Cell, inventoryOfCoins: Coin[], statusPanel: HTMLDivElement) {
     this.cell = cell;
     this.container = document.createElement("div")!;
     this.container.id = "geocache-container";
@@ -124,6 +125,7 @@ export class Geocache implements Momento<string> {
     this.statusPanel.innerHTML = `${this.inventoryOfCoins.length} points accumulated`;
     return;
   }
+  
   private updateDescription(): void {
     const description =
       this.container.querySelector<HTMLDivElement>("#description")!;

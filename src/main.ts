@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import "./style.css";
-import leaflet from "leaflet";
+import leaflet, { LatLng } from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
 import { Cell, Board } from "./board";
@@ -9,6 +9,12 @@ import { Geocache } from "./geoCache";
 interface Coin {
   cell: Cell;
   serial: number;
+}
+interface SaveState {
+  statusPanel: string;
+  inventoryOfCoins: Coin[];
+  currentPosition: { lat: number; lng: number };
+  geoSnapShots: [string, string][];
 }
 
 const MERRILL_CLASSROOM = leaflet.latLng({
@@ -67,16 +73,24 @@ let inventoryOfCoins: Coin[] = [];
 
 const currentPosition = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
-const board = new Board(config.tileDegrees, config.neighborhoodSize);
+let board = new Board(config.tileDegrees, config.neighborhoodSize);
+const pits: leaflet.Layer[] = [];
+
+save("intialState");
 
 function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   const geoCell = [cell.i, cell.j].toString();
   let geoCache: Geocache;
   if (geoSnapShots.has(geoCell)) {
-    console.log("Cell already exists in geoSnapShot");
     const momento = geoSnapShots.get(geoCell)!;
     geoCache = new Geocache({ i: 0, j: 0 }, inventoryOfCoins, statusPanel);
     geoCache.fromMomento(momento);
+    // const output = geoCache.setupPit();
+    // if (output) {
+    //   inventoryOfCoins = output.inventoryOfCoins;
+    //   statusPanel = output.statusPanel;
+    // }
+  
     return;
   }
 
@@ -88,14 +102,15 @@ function makeGeocache(cell: Cell): leaflet.Layer | undefined {
     const output = geoCache.setupPit();
     if (output) {
       inventoryOfCoins = output.inventoryOfCoins as Coin[];
-      statusPanel = output.statusPanel as HTMLDivElement;
+      statusPanel = output.statusPanel;
     }
+
     return output.container;
   });
 
   pit.addTo(map);
+  pits.push(pit);
   const momento = geoCache.toMomento();
-
   geoSnapShots.set(geoCell, momento);
   return pit;
 }
@@ -150,3 +165,63 @@ dir.directions.forEach((_dir) => {
   );
   dir.directionButtons.push(button);
 });
+
+const resetButton = document.querySelector("#reset")!;
+resetButton.addEventListener("click", reset);
+
+function reset() {
+  const answer = window.prompt("Reset Progress?")?.toLowerCase().trim();
+  if (answer === "no") return;
+  else if (answer === "yes") {
+    pits.forEach((pit) => map.removeLayer(pit));
+    board = new Board(config.tileDegrees, config.neighborhoodSize);
+    load("intialState");
+    localStorage.removeItem("saveState");
+  }
+}
+
+const saveButton = document.querySelector("#save")!;
+saveButton.addEventListener("click", () => {
+  save("saveState");
+});
+
+function save(stateName: string) {
+  const gameState: SaveState = {
+    statusPanel: statusPanel.innerHTML,
+    inventoryOfCoins: inventoryOfCoins,
+    currentPosition: {
+      lat: currentPosition.lat,
+      lng: currentPosition.lng,
+    },
+    geoSnapShots: [...geoSnapShots],
+  };
+
+  localStorage.setItem(stateName, JSON.stringify(gameState));
+}
+
+const loadButton = document.querySelector("#load")!;
+loadButton.addEventListener("click", () => {
+  load("saveState");
+});
+
+function load(stateName: string) {
+  const savedGameState = localStorage.getItem(stateName);
+  if (savedGameState) {
+    const gameState = JSON.parse(savedGameState) as SaveState;
+    statusPanel.innerHTML = gameState.statusPanel;
+    inventoryOfCoins = gameState.inventoryOfCoins;
+    geoSnapShots.clear();
+    gameState.geoSnapShots.forEach(([key, value]) => {
+      geoSnapShots.set(key, value);
+    });
+
+    playerMarker.setLatLng(gameState.currentPosition);
+    map.setView(gameState.currentPosition);
+    const pos = new LatLng(
+      gameState.currentPosition.lat,
+      gameState.currentPosition.lng
+    );
+
+    generateCacheLocations(pos);
+  }
+}
