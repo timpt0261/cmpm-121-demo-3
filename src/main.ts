@@ -74,42 +74,38 @@ let inventoryOfCoins: Coin[] = [];
 const currentPosition = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
 let board = new Board(config.tileDegrees, config.neighborhoodSize);
-const pits: leaflet.Layer[] = [];
+const pits = new Map<string, leaflet.Layer>();
 
 save("intialState");
 
+// update status panel and inventory with geocache
 function makeGeocache(cell: Cell): leaflet.Layer | undefined {
   const geoCell = [cell.i, cell.j].toString();
-  let geoCache: Geocache;
-  if (geoSnapShots.has(geoCell)) {
-    const momento = geoSnapShots.get(geoCell)!;
-    geoCache = new Geocache({ i: 0, j: 0 }, inventoryOfCoins, statusPanel);
-    geoCache.fromMomento(momento);
-    // const output = geoCache.setupPit();
-    // if (output) {
-    //   inventoryOfCoins = output.inventoryOfCoins;
-    //   statusPanel = output.statusPanel;
-    // }
-  
-    return;
-  }
-
-  geoCache = new Geocache(cell, inventoryOfCoins, statusPanel);
   const bounds = board.getCellBounds(cell);
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
+  const geoCache = new Geocache(cell, inventoryOfCoins, statusPanel);
 
   pit.bindPopup(() => {
+    
+    // if (geoSnapShots.has(geoCell)) {
+    //   if (pits.has(geoCell)) pit.removeFrom(map);
+    //   const momento = geoSnapShots.get(geoCell)!;
+    //   geoCache.fromMomento(momento);
+
+    // }
+
     const output = geoCache.setupPit();
     if (output) {
       inventoryOfCoins = output.inventoryOfCoins as Coin[];
       statusPanel = output.statusPanel;
     }
-
+    const momento = geoCache.toMomento();
+    geoSnapShots.set(geoCell, momento);
     return output.container;
   });
 
   pit.addTo(map);
-  pits.push(pit);
+  pits.set(geoCell, pit);
   const momento = geoCache.toMomento();
   geoSnapShots.set(geoCell, momento);
   return pit;
