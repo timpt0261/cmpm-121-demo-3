@@ -1,3 +1,4 @@
+import { LatLngBounds, Layer, Map, rectangle } from "leaflet";
 import { Cell } from "./board";
 import luck from "./luck";
 
@@ -57,7 +58,6 @@ export class Geocache implements Momento<string> {
     this.container.appendChild(pullButton);
 
     this.generateCoins();
-    // this.updateDescription();
 
     const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
     pull.addEventListener("click", () => {
@@ -108,9 +108,9 @@ export class Geocache implements Momento<string> {
     this.container.innerHTML = state.container.innerHTML;
   }
 
-  setupPit() {
+  updateGlobals() {
+    this.updateDescription();
     return {
-      container: this.container,
       inventoryOfCoins: this.inventoryOfCoins,
       statusPanel: this.statusPanel,
     };
@@ -147,5 +147,17 @@ export class Geocache implements Momento<string> {
       updatedTextLines += `<p> Coin  i:${coin.cell.i}  j:${coin.cell.j} serial:${coin.serial}</p>`;
     });
     coinsContainer.innerHTML = updatedTextLines;
+  }
+
+  public createPopUp(bounds: LatLngBounds, map: Map) {
+    const popUp = rectangle(bounds) as Layer;
+    // this.updateDescription();
+    popUp.bindPopup(this.container);
+    popUp.addTo(map);
+    // localStorage.setItem(
+    //   [this.cell.i, this.cell.j].toString(),
+    //   JSON.stringify(popUp)
+    // );
+    return popUp;
   }
 }

@@ -67,48 +67,32 @@ sensorButton.addEventListener("click", () => {
   });
 });
 
-let statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
+const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
 let inventoryOfCoins: Coin[] = [];
 
 const currentPosition = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
 let board = new Board(config.tileDegrees, config.neighborhoodSize);
-const pits = new Map<string, leaflet.Layer>();
+const popUps = new Map<string, leaflet.Layer>();
 
 save("intialState");
 
 // update status panel and inventory with geocache
-function makeGeocache(cell: Cell): leaflet.Layer | undefined {
+function makeGeocache(cell: Cell) {
   const geoCell = [cell.i, cell.j].toString();
   const bounds = board.getCellBounds(cell);
-  const pit = leaflet.rectangle(bounds) as leaflet.Layer;
   const geoCache = new Geocache(cell, inventoryOfCoins, statusPanel);
-
-  pit.bindPopup(() => {
-    
-    // if (geoSnapShots.has(geoCell)) {
-    //   if (pits.has(geoCell)) pit.removeFrom(map);
-    //   const momento = geoSnapShots.get(geoCell)!;
-    //   geoCache.fromMomento(momento);
-
-    // }
-
-    const output = geoCache.setupPit();
-    if (output) {
-      inventoryOfCoins = output.inventoryOfCoins as Coin[];
-      statusPanel = output.statusPanel;
-    }
-    const momento = geoCache.toMomento();
-    geoSnapShots.set(geoCell, momento);
-    return output.container;
-  });
-
-  pit.addTo(map);
-  pits.set(geoCell, pit);
+  if (popUps.has(geoCell)) {
+    const momento = geoSnapShots.get(geoCell)!;
+    geoCache.fromMomento(momento);
+    return;
+  }
+  const popUp = geoCache.createPopUp(bounds, map);
+  popUps.set(geoCell, popUp);
   const momento = geoCache.toMomento();
   geoSnapShots.set(geoCell, momento);
-  return pit;
+  return;
 }
 
 generateCacheLocations(currentPosition);
@@ -169,7 +153,7 @@ function reset() {
   const answer = window.prompt("Reset Progress?")?.toLowerCase().trim();
   if (answer === "no") return;
   else if (answer === "yes") {
-    pits.forEach((pit) => map.removeLayer(pit));
+    popUps.forEach((pit) => map.removeLayer(pit));
     board = new Board(config.tileDegrees, config.neighborhoodSize);
     load("intialState");
     localStorage.removeItem("saveState");
