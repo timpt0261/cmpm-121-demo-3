@@ -22,13 +22,16 @@ export class Geocache implements Momento<string> {
   private container: HTMLDivElement;
   private inventoryOfCoins: Coin[];
   private statusPanel: HTMLDivElement;
+  private updateGeoSnapshot: (geoCell: string, geoSnapshot: string) => void;
 
   constructor(
     cell: Cell,
     inventoryOfCoins: Coin[],
-    statusPanel: HTMLDivElement
+    statusPanel: HTMLDivElement,
+    updateGeoSnapshot: (geoCell: string, geoSnapshot: string) => void
   ) {
     this.cell = cell;
+    this.updateGeoSnapshot = updateGeoSnapshot;
     this.container = document.createElement("div")!;
     this.container.id = "geocache-container";
 
@@ -92,6 +95,7 @@ export class Geocache implements Momento<string> {
 
   toMomento(): string {
     const snapshot = {
+      cell: { i: this.cell.i, j: this.cell.j },
       coins: [...this.coins],
       container: this.container,
     };
@@ -100,7 +104,6 @@ export class Geocache implements Momento<string> {
 
   fromMomento(momento: string): void {
     const state: Geocache = JSON.parse(momento) as Geocache;
-
     // Clear existing coins and update with the saved state
     this.coins = state.coins.map((coin) => ({ ...coin }));
 
@@ -122,6 +125,10 @@ export class Geocache implements Momento<string> {
     this.statusPanel.innerHTML = `${this.inventoryOfCoins.length} points accumulated`;
     this.coins.push(cachedCoin);
     this.updateDescription();
+    const geoSnapshot = this.toMomento();
+    this.updateGeoSnapshot([this.cell.i, this.cell.j].toString(), geoSnapshot);
+
+    return geoSnapshot;
   }
 
   private handlePoke() {
@@ -131,7 +138,10 @@ export class Geocache implements Momento<string> {
     this.coins.length.toString();
     this.inventoryOfCoins.push(cachedCoin);
     this.statusPanel.innerHTML = `${this.inventoryOfCoins.length} points accumulated`;
-    return;
+    const geoSnapshot = this.toMomento();
+    this.updateGeoSnapshot([this.cell.i, this.cell.j].toString(), geoSnapshot);
+
+    return geoSnapshot;
   }
 
   private updateDescription(): void {
@@ -151,13 +161,8 @@ export class Geocache implements Momento<string> {
 
   public createPopUp(bounds: LatLngBounds, map: Map) {
     const popUp = rectangle(bounds) as Layer;
-    // this.updateDescription();
     popUp.bindPopup(this.container);
     popUp.addTo(map);
-    // localStorage.setItem(
-    //   [this.cell.i, this.cell.j].toString(),
-    //   JSON.stringify(popUp)
-    // );
     return popUp;
   }
 }
