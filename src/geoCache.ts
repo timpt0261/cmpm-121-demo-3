@@ -109,6 +109,17 @@ export class Geocache implements Momento<string> {
 
     // Update the container's inner HTML with the saved state
     this.container.innerHTML = state.container;
+
+    // Reattach event listeners for poke and pull buttons
+    const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
+    pull.addEventListener("click", () => {
+      return this.handlePull();
+    });
+
+    const poke = this.container.querySelector<HTMLButtonElement>("#poke")!;
+    poke.addEventListener("click", () => {
+      return this.handlePoke();
+    });
   }
 
   updateGlobals() {
