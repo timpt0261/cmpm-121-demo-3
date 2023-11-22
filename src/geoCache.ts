@@ -20,6 +20,8 @@ export class Geocache implements Momento<string> {
   private readonly cell: Cell;
   private coins: Coin[] = [];
   private container: HTMLDivElement;
+  private description = document.createElement("div")!;
+  private coinsContainer = document.createElement("div")!;
   private inventoryOfCoins: Coin[];
   private statusPanel: HTMLDivElement;
   private updateGeoSnapshot: (geoCell: string, geoSnapshot: string) => void;
@@ -36,20 +38,19 @@ export class Geocache implements Momento<string> {
     this.container.id = "geocache-container";
 
     // Create the description element
-    const description = document.createElement("div")!;
-    description.id = "description";
+    this.description = document.createElement("div")!;
+    this.description.id = "description";
     const span = document.createElement("span")!;
     span.id = "value";
-    description.innerHTML = `There is a pit here at "${cell.i},${cell.j}". It has value `;
-    description.appendChild(span);
-    this.container.appendChild(description);
+    this.description.innerHTML = `There is a pit here at "${cell.i},${cell.j}". It has value `;
+    this.description.appendChild(span);
+    this.container.appendChild(this.description);
 
     // Create the coins element
-    const coinsContainer = document.createElement("div")!;
-    coinsContainer.style.height = "100px";
-    coinsContainer.style.overflowY = "scroll";
-    coinsContainer.id = "coins";
-    this.container.appendChild(coinsContainer);
+    this.coinsContainer.style.height = "100px";
+    this.coinsContainer.style.overflowY = "scroll";
+    this.coinsContainer.id = "coins";
+    this.container.appendChild(this.coinsContainer);
 
     const pokeButton = document.createElement("button")!;
     pokeButton.id = "poke";
@@ -95,20 +96,19 @@ export class Geocache implements Momento<string> {
 
   toMomento(): string {
     const snapshot = {
-      cell: { i: this.cell.i, j: this.cell.j },
       coins: [...this.coins],
-      container: this.container,
+      container: this.container.innerHTML,
     };
     return JSON.stringify(snapshot);
   }
 
   fromMomento(momento: string): void {
-    const state: Geocache = JSON.parse(momento) as Geocache;
+    const state = JSON.parse(momento) as { coins: Coin[]; container: string };
     // Clear existing coins and update with the saved state
-    this.coins = state.coins.map((coin) => ({ ...coin }));
+    this.coins = state.coins;
 
     // Update the container's inner HTML with the saved state
-    this.container.innerHTML = state.container.innerHTML;
+    this.container.innerHTML = state.container;
   }
 
   updateGlobals() {

@@ -216,6 +216,7 @@ function load(stateName: string) {
       // Check if the geocache already exists on the map
       if (popUps.has(key)) {
         // Update the geocache with the saved state
+        const bounds = board.getCellBounds(cell);
         const geoCache: Geocache = new Geocache(
           cell,
           inventoryOfCoins,
@@ -223,6 +224,9 @@ function load(stateName: string) {
           updateGeoSnapshot
         );
         geoCache.fromMomento(value);
+        const popUp = popUps.get(key)!;
+        popUp.removeFrom(map);
+        geoCache.createPopUp(bounds, map);
       } else {
         // Create a new geocache and its popup
         const bounds = board.getCellBounds(cell);
