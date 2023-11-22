@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import "./style.css";
-import leaflet, { LatLng } from "leaflet";
+import leaflet from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
 import { Cell, Board } from "./board";
@@ -82,10 +82,22 @@ save("intialState");
 function makeGeocache(cell: Cell) {
   const geoCell = [cell.i, cell.j].toString();
   const bounds = board.getCellBounds(cell);
-  const geoCache = new Geocache(cell, inventoryOfCoins, statusPanel);
+
+  const updateGeoSnapshot = (geoCell: string, geoSnapshot: string) => {
+    geoSnapShots.set(geoCell, geoSnapshot);
+  };
+
+  const geoCache = new Geocache(
+    cell,
+    inventoryOfCoins,
+    statusPanel,
+    updateGeoSnapshot
+  );
   if (popUps.has(geoCell)) {
     const momento = geoSnapShots.get(geoCell)!;
     geoCache.fromMomento(momento);
+    const update = geoCache.toMomento();
+    geoSnapShots.set(geoCell, update);
     return;
   }
   const popUp = geoCache.createPopUp(bounds, map);
@@ -191,17 +203,42 @@ function load(stateName: string) {
     statusPanel.innerHTML = gameState.statusPanel;
     inventoryOfCoins = gameState.inventoryOfCoins;
     geoSnapShots.clear();
+
     gameState.geoSnapShots.forEach(([key, value]) => {
       geoSnapShots.set(key, value);
+      const cellCoordinates = key.split(",").map(Number);
+      const cell: Cell = { i: cellCoordinates[0], j: cellCoordinates[1] };
+
+      const updateGeoSnapshot = (geoCell: string, geoSnapshot: string) => {
+        geoSnapShots.set(geoCell, geoSnapshot);
+      };
+
+      // Check if the geocache already exists on the map
+      if (popUps.has(key)) {
+        // Update the geocache with the saved state
+        const geoCache: Geocache = new Geocache(
+          cell,
+          inventoryOfCoins,
+          statusPanel,
+          updateGeoSnapshot
+        );
+        geoCache.fromMomento(value);
+      } else {
+        // Create a new geocache and its popup
+        const bounds = board.getCellBounds(cell);
+        const geoCache = new Geocache(
+          cell,
+          inventoryOfCoins,
+          statusPanel,
+          updateGeoSnapshot
+        );
+        geoCache.fromMomento(value);
+        const popUp = geoCache.createPopUp(bounds, map);
+        popUps.set(key, popUp);
+      }
     });
 
     playerMarker.setLatLng(gameState.currentPosition);
     map.setView(gameState.currentPosition);
-    const pos = new LatLng(
-      gameState.currentPosition.lat,
-      gameState.currentPosition.lng
-    );
-
-    generateCacheLocations(pos);
   }
 }
