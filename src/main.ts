@@ -76,8 +76,6 @@ const geoSnapShots = new Map<string, string>();
 let board = new Board(config.tileDegrees, config.neighborhoodSize);
 const popUps = new Map<string, leaflet.Layer>();
 
-save("intialState");
-
 // update status panel and inventory with geocache
 function makeGeocache(cell: Cell) {
   const geoCell = [cell.i, cell.j].toString();
@@ -108,6 +106,7 @@ function makeGeocache(cell: Cell) {
 }
 
 generateCacheLocations(currentPosition);
+save("intialState");
 
 function generateCacheLocations(position: leaflet.LatLng) {
   for (const cell of board.getCellsNearPoint(position)) {
@@ -198,51 +197,43 @@ loadButton.addEventListener("click", () => {
 
 function load(stateName: string) {
   const savedGameState = localStorage.getItem(stateName);
-  if (savedGameState) {
-    const gameState = JSON.parse(savedGameState) as SaveState;
-    statusPanel.innerHTML = gameState.statusPanel;
-    inventoryOfCoins = gameState.inventoryOfCoins;
-    geoSnapShots.clear();
 
-    gameState.geoSnapShots.forEach(([key, value]) => {
-      geoSnapShots.set(key, value);
-      const cellCoordinates = key.split(",").map(Number);
-      const cell: Cell = { i: cellCoordinates[0], j: cellCoordinates[1] };
-
-      const updateGeoSnapshot = (geoCell: string, geoSnapshot: string) => {
-        geoSnapShots.set(geoCell, geoSnapshot);
-      };
-
-      // Check if the geocache already exists on the map
-      if (popUps.has(key)) {
-        // Update the geocache with the saved state
-        const bounds = board.getCellBounds(cell);
-        const geoCache: Geocache = new Geocache(
-          cell,
-          inventoryOfCoins,
-          statusPanel,
-          updateGeoSnapshot
-        );
-        geoCache.fromMomento(value);
-        const popUp = popUps.get(key)!;
-        popUp.removeFrom(map);
-        geoCache.createPopUp(bounds, map);
-      } else {
-        // Create a new geocache and its popup
-        const bounds = board.getCellBounds(cell);
-        const geoCache = new Geocache(
-          cell,
-          inventoryOfCoins,
-          statusPanel,
-          updateGeoSnapshot
-        );
-        geoCache.fromMomento(value);
-        const popUp = geoCache.createPopUp(bounds, map);
-        popUps.set(key, popUp);
-      }
-    });
-
-    playerMarker.setLatLng(gameState.currentPosition);
-    map.setView(gameState.currentPosition);
+  if (!savedGameState) {
+    return;
   }
+
+  const gameState = JSON.parse(savedGameState) as SaveState;
+  const updateGeoSnapshot = (geoCell: string, geoSnapshot: string) => {
+    geoSnapShots.set(geoCell, geoSnapshot);
+  };
+
+  statusPanel.innerHTML = gameState.statusPanel;
+  inventoryOfCoins = gameState.inventoryOfCoins;
+  geoSnapShots.clear();
+
+  gameState.geoSnapShots.forEach(([key, value]) => {
+    const cellCoordinates = key.split(",").map(Number);
+    const cell: Cell = { i: cellCoordinates[0], j: cellCoordinates[1] };
+    const bounds = board.getCellBounds(cell);
+
+    const geoCache = new Geocache(
+      cell,
+      inventoryOfCoins,
+      statusPanel,
+      updateGeoSnapshot
+    );
+
+    geoCache.fromMomento(value);
+
+    if (popUps.has(key)) {
+      const popUp = popUps.get(key)!;
+      popUp.removeFrom(map);
+    }
+
+    const popUp = geoCache.createPopUp(bounds, map);
+    popUps.set(key, popUp);
+  });
+
+  playerMarker.setLatLng(gameState.currentPosition);
+  map.setView(gameState.currentPosition);
 }

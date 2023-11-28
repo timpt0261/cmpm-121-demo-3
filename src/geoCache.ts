@@ -52,31 +52,25 @@ export class Geocache implements Momento<string> {
     this.coinsContainer.id = "coins";
     this.container.appendChild(this.coinsContainer);
 
+    this.createPokeAndPull();
+    this.generateCoins();
+    this.createPullandPush();
+    this.inventoryOfCoins = inventoryOfCoins;
+    this.statusPanel = statusPanel;
+
+    return;
+  }
+
+  private createPokeAndPull() {
     const pokeButton = document.createElement("button")!;
     pokeButton.id = "poke";
     pokeButton.innerText = "poke";
+
     const pullButton = document.createElement("button")!;
     pullButton.id = "pull";
     pullButton.innerText = "pull";
     this.container.appendChild(pokeButton);
     this.container.appendChild(pullButton);
-
-    this.generateCoins();
-
-    const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
-    pull.addEventListener("click", () => {
-      return this.handlePull();
-    });
-
-    const poke = this.container.querySelector<HTMLButtonElement>("#poke")!;
-    poke.addEventListener("click", () => {
-      return this.handlePoke();
-    });
-
-    this.inventoryOfCoins = inventoryOfCoins;
-    this.statusPanel = statusPanel;
-
-    return;
   }
 
   private generateCoins(): void {
@@ -111,6 +105,10 @@ export class Geocache implements Momento<string> {
     this.container.innerHTML = state.container;
 
     // Reattach event listeners for poke and pull buttons
+    this.createPullandPush();
+  }
+
+  private createPullandPush() {
     const pull = this.container.querySelector<HTMLButtonElement>("#pull")!;
     pull.addEventListener("click", () => {
       return this.handlePull();
