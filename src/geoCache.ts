@@ -136,7 +136,6 @@ export class Geocache implements Momento<string> {
     this.updateDescription();
     const geoSnapshot = this.toMomento();
     this.updateGeoSnapshot([this.cell.i, this.cell.j].toString(), geoSnapshot);
-
     return geoSnapshot;
   }
 

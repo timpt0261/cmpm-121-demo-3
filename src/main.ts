@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import "./style.css";
-import leaflet from "leaflet";
+import leaflet, { LatLng, Polyline } from "leaflet";
 import luck from "./luck";
 import "./leafletWorkaround";
 import { Cell, Board } from "./board";
@@ -71,10 +71,15 @@ const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
 let inventoryOfCoins: Coin[] = [];
 
-const currentPosition = playerMarker.getLatLng();
+const currentPosition: LatLng = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
 let board = new Board(config.tileDegrees, config.neighborhoodSize);
 const popUps = new Map<string, leaflet.Layer>();
+const pathWayHistory = [currentPosition];
+const pathWayHistoryLine = new Polyline(pathWayHistory, { color: "red" }).addTo(
+  map
+);
+map.fitBounds(pathWayHistoryLine.getBounds());
 
 // update status panel and inventory with geocache
 function makeGeocache(cell: Cell) {
@@ -143,10 +148,18 @@ function handleButtonClick(
     default:
       console.error("Invalid direction");
   }
+
+  // Add a new LatLng object to the history
+  pathWayHistory.push(leaflet.latLng(position.lat, position.lng));
+
+  // Update the Polyline with the entire history
+  pathWayHistoryLine.setLatLngs([...pathWayHistory]);
+
   playerMarker.setLatLng(position);
   map.setView(position);
   generateCacheLocations(position);
 }
+
 
 dir.directions.forEach((_dir) => {
   const selector = `#${_dir}`;
@@ -184,7 +197,7 @@ function save(stateName: string) {
       lat: currentPosition.lat,
       lng: currentPosition.lng,
     },
-    geoSnapShots: [...geoSnapShots],
+    geoSnapShots: [...geoSnapShots]
   };
 
   localStorage.setItem(stateName, JSON.stringify(gameState));
