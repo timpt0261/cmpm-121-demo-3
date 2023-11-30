@@ -75,11 +75,10 @@ const currentPosition: LatLng = playerMarker.getLatLng();
 const geoSnapShots = new Map<string, string>();
 let board = new Board(config.tileDegrees, config.neighborhoodSize);
 const popUps = new Map<string, leaflet.Layer>();
-const pathWayHistory = [currentPosition];
+const pathWayHistory: LatLng[] = [];
 const pathWayHistoryLine = new Polyline(pathWayHistory, { color: "red" }).addTo(
   map
 );
-map.fitBounds(pathWayHistoryLine.getBounds());
 
 // update status panel and inventory with geocache
 function makeGeocache(cell: Cell) {
@@ -132,6 +131,7 @@ function handleButtonClick(
   direction: string
 ) {
   const position = playerMarker.getLatLng();
+  pathWayHistory.push(leaflet.latLng(position.lat, position.lng));
   switch (direction) {
     case "north":
       position.lat += config.tileDegrees;
@@ -149,17 +149,13 @@ function handleButtonClick(
       console.error("Invalid direction");
   }
 
-  // Add a new LatLng object to the history
   pathWayHistory.push(leaflet.latLng(position.lat, position.lng));
-
-  // Update the Polyline with the entire history
   pathWayHistoryLine.setLatLngs([...pathWayHistory]);
 
   playerMarker.setLatLng(position);
   map.setView(position);
   generateCacheLocations(position);
 }
-
 
 dir.directions.forEach((_dir) => {
   const selector = `#${_dir}`;
@@ -197,7 +193,7 @@ function save(stateName: string) {
       lat: currentPosition.lat,
       lng: currentPosition.lng,
     },
-    geoSnapShots: [...geoSnapShots]
+    geoSnapShots: [...geoSnapShots],
   };
 
   localStorage.setItem(stateName, JSON.stringify(gameState));
