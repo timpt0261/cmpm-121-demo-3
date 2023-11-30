@@ -10,11 +10,13 @@ interface Coin {
   cell: Cell;
   serial: number;
 }
+
 interface SaveState {
   statusPanel: string;
   inventoryOfCoins: Coin[];
   currentPosition: { lat: number; lng: number };
   geoSnapShots: [string, string][];
+  pathWayHistory: string; // Change the type to [number, number][]
 }
 
 const MERRILL_CLASSROOM = leaflet.latLng({
@@ -194,6 +196,7 @@ function save(stateName: string) {
       lng: currentPosition.lng,
     },
     geoSnapShots: [...geoSnapShots],
+    pathWayHistory: JSON.stringify(pathWayHistory),
   };
 
   localStorage.setItem(stateName, JSON.stringify(gameState));
@@ -245,4 +248,10 @@ function load(stateName: string) {
 
   playerMarker.setLatLng(gameState.currentPosition);
   map.setView(gameState.currentPosition);
+
+  // Update the pathWayHistory and pathWayHistoryLine
+  const loadedPathWayHistory = JSON.parse(gameState.pathWayHistory) as LatLng[];
+  pathWayHistory.length = 0;
+  pathWayHistory.push(...loadedPathWayHistory);
+  pathWayHistoryLine.setLatLngs([...loadedPathWayHistory]);
 }
